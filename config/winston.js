@@ -84,7 +84,7 @@ var options = {
     console.log("Added winston MongoDB MT transport");
     logger.add(new winston.transports.MongoDB({db: logsDb, labelRequired:true,  level: process.env.LOG_MT_MONGODB_LEVEL || 'verbose', collection: "logsmt"}));
   } 
-
+  
 
   logger.stream = { 
     write: function(message, encoding) {
