@@ -519,6 +519,72 @@ router.delete('/:requestid/notes/:noteid',  function (req, res) {
 
 });
 
+
+
+
+
+
+router.post('/:requestid/followers', 
+[
+  check('member').notEmpty(),  
+],
+function (req, res) {
+  winston.info("followers add", req.body);
+  
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(422).json({ errors: errors.array() });
+  }
+  
+  //addParticipantByRequestId(request_id, id_project, member)
+  return requestService.addFollowerByRequestId(req.params.requestid, req.projectid, req.body.member ).then(function(updatedRequest) {
+
+      winston.verbose("participant added", updatedRequest);
+
+      return res.json(updatedRequest);
+  });
+  
+});
+
+
+router.put('/:requestid/followers', function (req, res) {
+  winston.debug("req.body", req.body);
+
+  var followers = [];
+  req.body.forEach(function(follower,index) {
+    followers.push(follower);
+  });
+  winston.debug("var followers", followers);
+  
+  // setFollowersByRequestId(request_id, id_project, newfollowers)
+  return requestService.setFollowersByRequestId(req.params.requestid, req.projectid, followers ).then(function(updatedRequest) {
+
+      winston.debug("followers set", updatedRequest);
+
+      return res.json(updatedRequest);
+  });
+  
+});
+
+router.delete('/:requestid/followers/:followerid', function (req, res) {
+  winston.debug(req.body);
+  
+   //removeFollowerByRequestId(request_id, id_project, member)
+  return requestService.removeFollowerByRequestId(req.params.requestid, req.projectid, req.params.followerid ).then(function(updatedRequest) {
+
+      winston.verbose("follower removed", updatedRequest);
+
+      return res.json(updatedRequest);
+  });
+  
+  
+});
+
+
+
+
+
+
 // TODO make a synchronous chat21 version (with query parameter?) with request.support_group.created
 router.delete('/:requestid',  function (req, res) {
   
@@ -589,6 +655,8 @@ router.delete('/id/:id',  function (req, res) {
 
 
 router.get('/', function (req, res, next) {
+
+  const startExecTime = new Date();
 
   winston.debug("req projectid", req.projectid);
   winston.debug("req.query.sort", req.query.sort);
@@ -710,6 +778,7 @@ router.get('/', function (req, res, next) {
    *  THE SEARCH FOR DATE INTERVAL OF THE HISTORY OF REQUESTS ARE DISABLED AND 
    *  ARE DISPLAYED ONLY THE REQUESTS OF THE LAST 14 DAYS
    */
+                                                                        //secondo me qui manca un parentesi tonda per gli or
   if ( history_search === true && req.project && req.project.profile && (req.project.profile.type === 'free' && req.project.trialExpired === true) || (req.project.profile.type === 'payment' && req.project.isActiveSubscription === false)) {
 
 
@@ -814,7 +883,14 @@ router.get('/', function (req, res, next) {
   }
 
   if (req.query.channel) {
-    query["channel.name"] =  req.query.channel
+    if (req.query.channel === "offline") {
+      query["channel.name"] =  {"$in" : ["email", "form"]}
+    } else  if (req.query.channel === "online") {
+      query["channel.name"] =  {"$nin" : ["email", "form"]}
+    } else {
+      query["channel.name"] =  req.query.channel
+    }
+    
     winston.debug('REQUEST ROUTE - QUERY channel', query.channel);
   }
 
@@ -836,14 +912,17 @@ router.get('/', function (req, res, next) {
 
   winston.debug("sort query", sortQuery);
 
-  winston.verbose('REQUEST ROUTE - REQUEST FIND ', query);
+  winston.debug('REQUEST ROUTE - REQUEST FIND ', query);
 
   var projection = undefined;
 
   if (req.query.full_text) {  
-    winston.debug('fulltext projection'); 
 
-    projection = {score: { $meta: "textScore" } };
+    if (req.query.no_textscore!= "true" && req.query.no_textscore!= true) {
+      winston.info('fulltext projection on'); 
+      projection = {score: { $meta: "textScore" } };
+    } 
+    
   }
   // requestcachefarequi populaterequired
   var q1 = Request.find(query, projection).
@@ -875,7 +954,9 @@ router.get('/', function (req, res, next) {
 
     if (req.query.full_text) {     
       winston.debug('fulltext sort'); 
-      q1.sort( { score: { $meta: "textScore" } } ) //https://docs.mongodb.com/manual/reference/operator/query/text/#sort-by-text-search-score
+      if (req.query.no_textscore!= "true" && req.query.no_textscore!= true) {
+        q1.sort( { score: { $meta: "textScore" } } ) //https://docs.mongodb.com/manual/reference/operator/query/text/#sort-by-text-search-score
+      }
     } else {
       q1.sort(sortQuery);
     }
@@ -891,6 +972,11 @@ router.get('/', function (req, res, next) {
 
   var q2 =  Request.countDocuments(query).exec();
 
+  if (req.query.no_count && req.query.no_count =="true") {
+    winston.info('REQUEST ROUTE - no_count ');
+    q2 = 0;
+  }
+
   var promises = [
     q1,
     q2
@@ -902,7 +988,12 @@ router.get('/', function (req, res, next) {
       count: results[1],
       requests: results[0]
     };
+    winston.debug('REQUEST ROUTE - objectToReturn ');
     winston.debug('REQUEST ROUTE - objectToReturn ', objectToReturn);
+
+    const endExecTime = new Date();
+    winston.info('REQUEST ROUTE - exec time:  ' + (endExecTime-startExecTime));
+
     return res.json(objectToReturn);
 
   }).catch(function(err){
@@ -1026,7 +1117,12 @@ router.get('/csv', function (req, res, next) {
   winston.debug("sort query", sortQuery);
 
 
-  
+  // TODO ORDER BY SCORE
+  // return Faq.find(query,  {score: { $meta: "textScore" } }) 
+  // .sort( { score: { $meta: "textScore" } } ) //https://docs.mongodb.com/manual/reference/operator/query/text/#sort-by-text-search-score
+
+  // aggiungi filtro per data marco
+
   winston.debug('REQUEST ROUTE - REQUEST FIND ', query)
     return Request.find(query, '-transcript -status -__v').
     skip(skip).limit(limit).
@@ -1126,14 +1222,6 @@ router.get('/csv', function (req, res, next) {
 
           winston.debug('REQUEST ROUTE - REQUEST AS CSV', requests);
 
-        // return Request.count(query, function(err, totalRowCount) {
-
-          // var objectToReturn = {
-          //   perPage: limit,
-          //   count: totalRowCount,
-          //   requests : requests
-          // };
-          // console.log('REQUEST ROUTE - objectToReturn ', objectToReturn);
           return res.csv(requests, true);
         });
        

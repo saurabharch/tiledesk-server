@@ -86,6 +86,9 @@ var printer = new PdfPrinter(fonts);
         delete element.attributes;
       });
 
+      res.setHeader('Content-Type', 'applictext/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename=transcript.csv');
+
       return res.csv(messages, true);
     });
 
@@ -170,6 +173,11 @@ var printer = new PdfPrinter(fonts);
    
     var pdfDoc = printer.createPdfKitDocument(docDefinition);
     // pdfDoc.pipe(fs.createWriteStream('lists.pdf'));
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename=transcript.pdf');
+            
+
     pdfDoc.pipe(res);
     pdfDoc.end();
 
@@ -287,6 +295,10 @@ var printer = new PdfPrinter(fonts);
    
     var pdfDoc = printer.createPdfKitDocument(docDefinition);
     // pdfDoc.pipe(fs.createWriteStream('lists.pdf'));
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename=transcript.pdf');
+    
     pdfDoc.pipe(res);
     pdfDoc.end();
 
@@ -327,6 +339,9 @@ var printer = new PdfPrinter(fonts);
         delete element.attributes;
       });
 
+
+      res.setHeader('Content-Type', 'applictext/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename=transcript.csv');
 
       return res.csv(messages, true);
     });
