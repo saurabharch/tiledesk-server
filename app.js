@@ -77,7 +77,7 @@ mongoose.set('useFindAndModify', false); // https://mongoosejs.com/docs/deprecat
 mongoose.set('useCreateIndex', true);
 mongoose.set('useUnifiedTopology', false); 
 
-
+// ROUTES *//
 
 var auth = require('./routes/auth');
 var authtest = require('./routes/authtest');
@@ -119,7 +119,9 @@ var logs = require('./routes/logs');
 var requestUtilRoot = require('./routes/requestUtilRoot');
 var urls = require('./routes/urls');
 var email = require('./routes/email');
+// ROUTES *//
 
+// SERVICES *//
 var bootDataLoader = require('./services/bootDataLoader');
 var settingDataLoader = require('./services/settingDataLoader');
 var schemaMigrationService = require('./services/schemaMigrationService');
@@ -139,15 +141,6 @@ geoService.listen();
 
 var faqBotHandler = require('./services/faqBotHandler');
 faqBotHandler.listen();
-
-var pubModulesManager = require('./pubmodules/pubModulesManager');
-pubModulesManager.init({express:express, mongoose:mongoose, passport:passport, databaseUri:databaseUri, routes:{}});
-  
-var channelManager = require('./channels/channelManager');
-channelManager.listen(); 
-
-var IPFilter = require('./middleware/ipFilter');
-
 var BanUserNotifier = require('./services/banUserNotifier');
 BanUserNotifier.listen();
 
@@ -159,6 +152,11 @@ try {
   winston.info("ModulesManager not present");
 }
 
+// SERVICES END *//
+
+// SUBMODULES *//
+var pubModulesManager = require('./pubmodules/pubModulesManager');
+pubModulesManager.init({express:express, mongoose:mongoose, passport:passport, databaseUri:databaseUri, routes:{}});
 
 //enterprise modules can modify pubmodule
 modulesManager.start();
@@ -168,6 +166,19 @@ pubModulesManager.start();
 
 settingDataLoader.save();
 schemaMigrationService.checkSchemaMigration();
+
+// SUBMODULES END *//
+
+
+// MIDDLEWARE *//
+var IPFilter = require('./middleware/ipFilter');
+// MIDDLEWARE END*//
+
+// CHANNELS *//
+var channelManager = require('./channels/channelManager');
+channelManager.listen(); 
+// CHANNELS END*//
+
 
 if (process.env.CREATE_INITIAL_DATA !== "false") {
    bootDataLoader.create();
@@ -269,13 +280,13 @@ if (process.env.ROUTELOGGER_ENABLED==="true") {
 
       routerLogger.save(function (err, savedRouterLogger) {        
         if (err) {
-          winston.error('Error saving RouterLogger ', err)
+          winston.error('Error saving RouterLogger ', err);
         }
         winston.debug("RouterLogger saved "+ savedRouterLogger);
         next();
       });
       }catch(e) {
-        winston.error('Error saving RouterLogger ', e)
+        winston.error('Error saving RouterLogger ', e);
         next();
       }
   });
@@ -299,8 +310,8 @@ var projectIdSetter = function (req, res, next) {
     req.projectid = projectid;
   // }
   
-  next()
-}
+  next();
+};
 
 
 
@@ -329,11 +340,11 @@ var projectSetter = function (req, res, next) {
     });
   
   }else {
-    next()
+    next();
   }
   
 
-}
+};
 
 
 
@@ -349,14 +360,16 @@ var projectSetter = function (req, res, next) {
 // const ips = ['::1'];
 
 app.use('/auth', auth);
-app.use('/testauth', [passport.authenticate(['basic', 'jwt'], { session: false }), validtoken], authtest);
-
 app.use('/widgets', widgetsLoader);
 app.use('/w', widgetsLoader);
 
 app.use('/images', images);
 app.use('/files', files);
 app.use('/urls', urls);
+app.use('/projects',project);
+
+app.use('/testauth', [passport.authenticate(['basic', 'jwt'], { session: false }), validtoken], authtest);
+
 app.use('/users', [passport.authenticate(['basic', 'jwt'], { session: false }), validtoken], users);
 app.use('/logs', logs);
 app.use('/requests_util', [passport.authenticate(['basic', 'jwt'], { session: false }), validtoken], requestUtilRoot);
@@ -369,20 +382,21 @@ if (process.env.DISABLE_TRANSCRIPT_VIEW_PAGE ) {
 }
 
 // project internal auth check. TODO check security issues?
-app.use('/projects',project);
 
 channelManager.use(app);
 
 if (pubModulesManager) {
   pubModulesManager.use(app);
+  pubModulesManager.useUnderProjects(app);
 }
 
 if (modulesManager) {
   modulesManager.use(app);
+  modulesManager.useUnderProjects(app);
 }
 
-app.use('/:projectid/', [projectIdSetter, projectSetter, IPFilter.projectIpFilter, IPFilter.projectIpFilterDeny, IPFilter.decodeJwt, IPFilter.projectBanUserFilter]);
 
+app.use('/:projectid/', [projectIdSetter, projectSetter, IPFilter.projectIpFilter, IPFilter.projectIpFilterDeny, IPFilter.decodeJwt, IPFilter.projectBanUserFilter]);
 
 app.use('/:projectid/authtestWithRoleCheck', [passport.authenticate(['basic', 'jwt'], { session: false }), validtoken], authtestWithRoleCheck);
 
@@ -450,13 +464,6 @@ app.use('/:projectid/emails',[passport.authenticate(['basic', 'jwt'], { session:
 
 
 
-if (pubModulesManager) {
-  pubModulesManager.useUnderProjects(app);
-}
-
-if (modulesManager) {
-  modulesManager.useUnderProjects(app);
-}
  
   
 // REENABLEIT
@@ -489,7 +496,7 @@ app.use(function (err, req, res, next) {
 // error handler
 app.use((err, req, res, next) => {
 
-  winston.debug("err.name", err.name)
+  winston.debug("err.name", err.name);
   if (err.name === "IpDeniedError") {
     winston.info("IpDeniedError");
     return res.status(401).json({ err: "error ip filter" });
