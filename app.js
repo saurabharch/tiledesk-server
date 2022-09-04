@@ -29,7 +29,6 @@ var cors = require('cors');
 var Project = require("./models/project");
 var validtoken = require('./middleware/valid-token');
 var roleChecker = require('./middleware/has-role');
-
 const MaskData = require("maskdata");
 var winston = require('./config/winston');
 
@@ -202,7 +201,7 @@ if (process.env.ENABLE_ALTERNATIVE_CORS_MIDDLEWARE === "true") {
     res.header("Access-Control-Allow-Origin", "*"); //qui dice cequens attento
     // var request_cors_header = req.headers[""]
     res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization, x-xsrf-token");
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
     next();
   });
 

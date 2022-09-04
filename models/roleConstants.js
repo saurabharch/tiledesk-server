@@ -7,4 +7,4 @@ module.exports = {
         TEAMMATE : 'teammate',
         USER : 'user',            
         GUEST : 'guest',            
-}
+};
