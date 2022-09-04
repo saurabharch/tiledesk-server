@@ -1,3 +1,4 @@
+![tiledesk.com -  Engage your customers throughout their journey](./assests/Tiledesk-Banner.png)
 [![npm version](https://badge.fury.io/js/%40tiledesk%2Ftiledesk-server.svg)](https://badge.fury.io/js/%40tiledesk%2Ftiledesk-server)
 
 [![CircleCI](https://circleci.com/gh/Tiledesk/tiledesk-server.svg?style=svg)](https://circleci.com/gh/Tiledesk/tiledesk-server)
